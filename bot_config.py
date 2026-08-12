@@ -11,13 +11,15 @@ FALLBACK_SECRET_PIN = "981239"
 FALLBACK_CODE_LINK = "https://t.me/+12202858715"
 FALLBACK_TARGET_CHAT_ID = "-4388045069"
 
+STATE_DIR = Path("/tmp") if os.getenv("VERCEL") else Path(".")
+
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", FALLBACK_BOT_TOKEN).strip()
 SECRET_PIN = (os.getenv("SECRET_PIN") or FALLBACK_SECRET_PIN).strip()
 CODE_LINK = (os.getenv("CODE_LINK") or FALLBACK_CODE_LINK).strip()
 TARGET_CHAT_ID = os.getenv("TARGET_CHAT_ID", FALLBACK_TARGET_CHAT_ID).strip()
-PENDING_FILE = Path(os.getenv("PENDING_FILE", "pending_requests.json"))
-LAST_UPDATE_FILE = Path(os.getenv("LAST_UPDATE_FILE", "last_update.json"))
-KNOWN_USERS_FILE = Path(os.getenv("KNOWN_USERS_FILE", "known_users.json"))
+PENDING_FILE = Path(os.getenv("PENDING_FILE", str(STATE_DIR / "pending_requests.json")))
+LAST_UPDATE_FILE = Path(os.getenv("LAST_UPDATE_FILE", str(STATE_DIR / "last_update.json")))
+KNOWN_USERS_FILE = Path(os.getenv("KNOWN_USERS_FILE", str(STATE_DIR / "known_users.json")))
 
 YES_CALLBACK = "secret_key_yes"
 NO_CALLBACK = "secret_key_no"

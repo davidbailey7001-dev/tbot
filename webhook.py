@@ -211,6 +211,16 @@ def target_chat_id() -> int:
     return int(settings.TARGET_CHAT_ID)
 
 
+def approve_user(user_id: int, chat_id: Optional[int] = None) -> None:
+    telegram_api(
+        "approveChatJoinRequest",
+        {
+            "chat_id": chat_id or target_chat_id(),
+            "user_id": user_id,
+        },
+    )
+
+
 def resolve_recipient(value: str) -> Optional[dict[str, Any]]:
     lookup = normalize_lookup(value)
     if not lookup:
@@ -332,15 +342,9 @@ def handle_callback_query(callback_query: dict[str, Any]) -> None:
         return
 
     if not user_pending:
-        edit_message_text(
-            chat_id=message_chat_id,
-            message_id=message_id,
-            text=(
-                "I do not see a pending join request for you. "
-                "Please request to join the group first."
-            ),
-        )
-        return
+        seed_pending_for_prompt(user["id"], message_chat_id)
+        pending = settings.load_pending()
+        user_pending = pending.get(user_key)
 
     if callback_query.get("data") == settings.YES_CALLBACK:
         user_pending["status"] = "awaiting_pin"
@@ -418,6 +422,23 @@ def handle_private_message(message: dict[str, Any]) -> None:
         return
 
     if not user_pending:
+        if settings.SECRET_PIN and text == settings.SECRET_PIN:
+            try:
+                approve_user(user_id)
+            except Exception as exc:
+                logger.exception("Could not approve user without stored pending request.")
+                send_message(
+                    chat_id=chat["id"],
+                    text=(
+                        "Your key is correct, but I could not approve the join "
+                        f"request automatically: {exc}"
+                    ),
+                )
+                return
+
+            send_message(chat_id=chat["id"], text="Your key is correct. You now have access to the group.")
+            return
+
         send_message(
             chat_id=chat["id"],
             text=(
@@ -464,13 +485,7 @@ def handle_private_message(message: dict[str, Any]) -> None:
         )
         return
 
-    telegram_api(
-        "approveChatJoinRequest",
-        {
-            "chat_id": user_pending["chat_id"],
-            "user_id": user_id,
-        },
-    )
+    approve_user(user_id, user_pending["chat_id"])
     pending.pop(user_key, None)
     settings.save_pending(pending)
     send_message(chat_id=chat["id"], text="Your key is correct. You now have access to the group.")
